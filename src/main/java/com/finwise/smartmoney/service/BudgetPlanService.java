@@ -2,9 +2,9 @@ package com.finwise.smartmoney.service;
 
 import com.finwise.smartmoney.dto.BudgetPlanResponseDTO;
 import com.finwise.smartmoney.entity.BudgetPlan;
-import com.finwise.smartmoney.entity.Salary;
+import com.finwise.smartmoney.entity.Income;
 import com.finwise.smartmoney.repository.BudgetPlanRepository;
-import com.finwise.smartmoney.repository.SalaryRepository;
+import com.finwise.smartmoney.repository.IncomeRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -18,26 +18,27 @@ public class BudgetPlanService {
     @Autowired
     private BudgetPlanRepository budgetPlanRepository;
     @Autowired
-    SalaryRepository salaryRepository;
+    IncomeRepository incomeRepository;
 
-    public String generateBudgetForSalary(Long salaryId) {
-        Salary salary = salaryRepository.findById(salaryId)
-                .orElseThrow(() -> new RuntimeException("Salary not found with id: " + salaryId));
+    public String generateBudgetFromLatestSalary() {
+        Income salaryIncome = incomeRepository
+                .findTopByCategoryIgnoreCaseOrderByDateDesc("salary")
+                .orElseThrow(() -> new RuntimeException("No salary income found"));
 
-        // ✅ Check if a budget plan already exists for this salary
-        Optional<BudgetPlan> existing = budgetPlanRepository.findBySalary(salary);
+        // Check if a budget plan already exists for this salary
+        Optional<BudgetPlan> existing = budgetPlanRepository.findByIncome(salaryIncome);
         if (existing.isPresent()) {
-            throw new RuntimeException("Budget plan already exists for salary ID: " + salaryId);
+            throw new RuntimeException("Budget plan already exists for this salary income");
         }
         // Use standard 50/30/20 rule
         // 50% for needs, 30% for wants, 20% for investments
-        BigDecimal total = salary.getAmount();
+        BigDecimal total = salaryIncome.getAmount();
         BigDecimal needsPercent = BigDecimal.valueOf(50);
         BigDecimal wantsPercent = BigDecimal.valueOf(30);
         BigDecimal investPercent = BigDecimal.valueOf(20);
 
         BudgetPlan budgetPlan = new BudgetPlan();
-        budgetPlan.setSalary(salary);
+        budgetPlan.setIncome(salaryIncome);
         budgetPlan.setNeedsPercent(needsPercent);
         budgetPlan.setWantsPercent(wantsPercent);
         budgetPlan.setInvestPercent(investPercent);
@@ -47,25 +48,24 @@ public class BudgetPlanService {
 
         BudgetPlan savedBudgetPlan = budgetPlanRepository.save(budgetPlan);
 
-        return "Budget plan generated successfully for salary ID: " + savedBudgetPlan.getSalary().getId();
+        return "Budget plan generated successfully for income ID: " + savedBudgetPlan.getIncome().getId();
     }
 
-    public BudgetPlanResponseDTO getBudgetBySalaryId(Salary salaryId) {
-        Salary salary = salaryRepository.findById(salaryId.getId())
-                .orElseThrow(() -> new RuntimeException("Salary not found with id: " + salaryId.getId()));
+    public BudgetPlanResponseDTO getBudgetByLatestSalary() {
+        Income salaryIncome = incomeRepository
+                .findTopByCategoryIgnoreCaseOrderByDateDesc("salary")
+                .orElseThrow(() -> new RuntimeException("No salary income found"));
 
-        BudgetPlan budgetPlan = budgetPlanRepository.findBySalary(salary)
-                .orElseThrow(() -> new RuntimeException("Budget plan not found for salary ID: " + salaryId.getId()));
+        BudgetPlan budgetPlan = budgetPlanRepository.findByIncome(salaryIncome)
+                .orElseThrow(() -> new RuntimeException("No budget found for the latest salary income"));
 
         return mapToDTO(budgetPlan);
     }
 
     private BudgetPlanResponseDTO mapToDTO(BudgetPlan plan) {
         BudgetPlanResponseDTO dto = new BudgetPlanResponseDTO();
-        dto.setSalaryId(plan.getSalary().getId());
-        dto.setNeedsPercent(plan.getNeedsPercent());
-        dto.setWantsPercent(plan.getWantsPercent());
-        dto.setInvestPercent(plan.getInvestPercent());
+        dto.setIncomeId(plan.getIncome().getId());
+        dto.setSalaryDate(plan.getIncome().getDate());
         dto.setCalculatedNeeds(plan.getCalculatedNeeds());
         dto.setCalculatedWants(plan.getCalculatedWants());
         dto.setCalculatedInvestments(plan.getCalculatedInvestments());

@@ -1,50 +1,38 @@
 package com.finwise.smartmoney.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 public class BudgetPlanResponseDTO {
-    private Long salaryId;
-    private BigDecimal needsPercent;
-    private BigDecimal wantsPercent;
-    private BigDecimal investPercent;
-
+    @JsonProperty("Income ID")
+    private Long incomeId;
+    @JsonProperty("Salary date")
+    private LocalDate salaryDate;
+    @JsonProperty("Needs")
     private BigDecimal calculatedNeeds;
+    @JsonProperty("Wants")
     private BigDecimal calculatedWants;
+    @JsonProperty("Investments")
     private BigDecimal calculatedInvestments;
 
     // Getters and Setters
 
-
-    public Long getSalaryId() {
-        return salaryId;
+    public Long getIncomeId() {
+        return incomeId;
     }
 
-    public void setSalaryId(Long salaryId) {
-        this.salaryId = salaryId;
+    public void setIncomeId(Long incomeId) {
+        this.incomeId = incomeId;
     }
 
-    public BigDecimal getNeedsPercent() {
-        return needsPercent;
+    public LocalDate getSalaryDate() {
+        return salaryDate;
     }
 
-    public void setNeedsPercent(BigDecimal needsPercent) {
-        this.needsPercent = needsPercent;
-    }
-
-    public BigDecimal getWantsPercent() {
-        return wantsPercent;
-    }
-
-    public void setWantsPercent(BigDecimal wantsPercent) {
-        this.wantsPercent = wantsPercent;
-    }
-
-    public BigDecimal getInvestPercent() {
-        return investPercent;
-    }
-
-    public void setInvestPercent(BigDecimal investPercent) {
-        this.investPercent = investPercent;
+    public void setSalaryDate(LocalDate salaryDate) {
+        this.salaryDate = salaryDate;
     }
 
     public BigDecimal getCalculatedNeeds() {

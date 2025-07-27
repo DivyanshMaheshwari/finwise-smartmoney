@@ -14,8 +14,8 @@ public class BudgetPlan {
     Long id;
 
     @OneToOne
-    @JoinColumn(name = "salary_id")
-    private Salary salary;
+    @JoinColumn(name = "income_id")
+    private Income income;
 
     @Column(name = "needs_percent")
     private BigDecimal needsPercent;
@@ -38,12 +38,12 @@ public class BudgetPlan {
         this.id = id;
     }
 
-    public Salary getSalary() {
-        return salary;
+    public Income getIncome() {
+        return income;
     }
 
-    public void setSalary(Salary salary) {
-        this.salary = salary;
+    public void setIncome(Income income) {
+        this.income = income;
     }
 
     public BigDecimal getNeedsPercent() {
