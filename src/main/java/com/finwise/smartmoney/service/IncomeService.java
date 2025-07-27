@@ -2,7 +2,6 @@ package com.finwise.smartmoney.service;
 
 import com.finwise.smartmoney.dto.IncomeRequestDTO;
 import com.finwise.smartmoney.dto.IncomeResponseDTO;
-import com.finwise.smartmoney.entity.Expense;
 import com.finwise.smartmoney.entity.Income;
 import com.finwise.smartmoney.repository.IncomeRepository;
 import com.finwise.smartmoney.util.DateUtils;
@@ -10,7 +9,6 @@ import com.finwise.smartmoney.util.MonthRange;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -27,7 +25,7 @@ public class IncomeService {
         income.setDate(incomeRequestDto.getDate());
         income.setCategory(incomeRequestDto.getCategory());
         income.setSource(incomeRequestDto.getSource());
-        income.setRecurring(incomeRequestDto.getIsRecurring());
+        income.setIsRecurring(incomeRequestDto.getIsRecurring());
         income.setNote(incomeRequestDto.getNote());
 
         // Save the income entity
@@ -59,7 +57,7 @@ public class IncomeService {
         dto.setDate(income.getDate());
         dto.setCategory(income.getCategory());
         dto.setSource(income.getSource());
-        dto.setRecurring(income.getRecurring());
+        dto.setIsRecurring(income.getIsRecurring());
         dto.setNote(income.getNote());
         return dto;
     }
