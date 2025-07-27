@@ -12,11 +12,9 @@ public class BudgetPlan {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id")
     Long id;
-
     @OneToOne
     @JoinColumn(name = "income_id")
     private Income income;
-
     @Column(name = "needs_percent")
     private BigDecimal needsPercent;
     @Column(name = "wants_percent")
