@@ -4,9 +4,11 @@ import com.finwise.smartmoney.dto.MonthlySummaryResponseDTO;
 import com.finwise.smartmoney.entity.BudgetPlan;
 import com.finwise.smartmoney.entity.Expense;
 import com.finwise.smartmoney.entity.Income;
+import com.finwise.smartmoney.entity.Saving;
 import com.finwise.smartmoney.repository.BudgetPlanRepository;
 import com.finwise.smartmoney.repository.ExpenseRepository;
 import com.finwise.smartmoney.repository.IncomeRepository;
+import com.finwise.smartmoney.repository.SavingRepository;
 import com.finwise.smartmoney.util.DateUtils;
 import com.finwise.smartmoney.util.MonthRange;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,6 +30,9 @@ public class SummaryService {
     @Autowired
     private BudgetPlanRepository budgetPlanRepository;
 
+    @Autowired
+    private SavingRepository savingRepository;
+
     public MonthlySummaryResponseDTO getSummary(int month, int year) {
         MonthRange range = DateUtils.getMonthRange(year, month);
         LocalDate start = range.getStart();
@@ -35,6 +40,7 @@ public class SummaryService {
 
         List<Income> incomes = incomeRepository.findByDateBetween(start, end);
         List<Expense> expenses = expenseRepository.findByDateBetween(start, end);
+        List<Saving> savings = savingRepository.findByDateBetween(start, end);
 
         BigDecimal totalIncome = BigDecimal.ZERO;
         for (Income income : incomes) {
@@ -54,6 +60,8 @@ public class SummaryService {
 
         BigDecimal actualNeeds = BigDecimal.ZERO;
         BigDecimal actualWants = BigDecimal.ZERO;
+        BigDecimal actualInvestments = BigDecimal.ZERO;
+
 
         for (Expense expense : expenses) {
             if ("needs".equalsIgnoreCase(expense.getType()) && expense.getAmount() != null) {
@@ -62,8 +70,10 @@ public class SummaryService {
                 actualWants = actualWants.add(expense.getAmount());
             }
         }
-
-        BigDecimal actualInvestments = BigDecimal.ZERO; // Placeholder
+        // calculate actual investments from savings
+        for (Saving saving : savings) {
+            actualInvestments = actualInvestments.add(saving.getAmount());
+        }
 
         MonthlySummaryResponseDTO dto = new MonthlySummaryResponseDTO();
         dto.setMonth(year + "-" + (month < 10 ? "0" + month : String.valueOf(month)));

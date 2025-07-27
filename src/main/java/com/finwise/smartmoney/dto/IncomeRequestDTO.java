@@ -10,6 +10,10 @@ public class IncomeRequestDTO {
     private String source;
     private Boolean isRecurring;
     private String note;
+    private String frequency;      // WEEKLY, MONTHLY, YEARLY
+    private LocalDate endDate;     // Optional
+    private Integer recurringDay;  // Optional (defaults to transaction date)
+
 
     // Getters and Setters
 
@@ -60,5 +64,29 @@ public class IncomeRequestDTO {
 
     public void setNote(String note) {
         this.note = note;
+    }
+
+    public String getFrequency() {
+        return frequency;
+    }
+
+    public void setFrequency(String frequency) {
+        this.frequency = frequency;
+    }
+
+    public LocalDate getEndDate() {
+        return endDate;
+    }
+
+    public void setEndDate(LocalDate endDate) {
+        this.endDate = endDate;
+    }
+
+    public Integer getRecurringDay() {
+        return recurringDay;
+    }
+
+    public void setRecurringDay(Integer recurringDay) {
+        this.recurringDay = recurringDay;
     }
 }

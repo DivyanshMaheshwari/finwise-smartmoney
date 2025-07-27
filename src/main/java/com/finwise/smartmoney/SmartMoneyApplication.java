@@ -2,12 +2,14 @@ package com.finwise.smartmoney;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication
-public class SmartmoneyApplication {
+@EnableScheduling
+public class SmartMoneyApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(SmartmoneyApplication.class, args);
+		SpringApplication.run(SmartMoneyApplication.class, args);
 	}
 
 }
