@@ -33,12 +33,12 @@ public class SummaryService {
     @Autowired
     private SavingRepository savingRepository;
 
-    public MonthlySummaryResponseDTO getSummary(int month, int year) {
+    public MonthlySummaryResponseDTO getSummary(String userId,int month, int year) {
         MonthRange range = DateUtils.getMonthRange(year, month);
         LocalDate start = range.getStart();
         LocalDate end = range.getEnd();
 
-        List<Income> incomes = incomeRepository.findByDateBetween(start, end);
+        List<Income> incomes = incomeRepository.findByUserIdAndDateBetween(userId, start,end);
         List<Expense> expenses = expenseRepository.findByDateBetween(start, end);
         List<Saving> savings = savingRepository.findByDateBetween(start, end);
 

@@ -10,7 +10,9 @@ import java.util.Optional;
 
 @Repository
 public interface IncomeRepository extends JpaRepository<Income, Long> {
-    List<Income> findByDateBetween(LocalDate start, LocalDate end);
-    Optional<Income> findTopByCategoryIgnoreCaseOrderByDateDesc(String category);
 
+    // 🟢 Filter incomes by userId and date range
+    List<Income> findByUserIdAndDateBetween(String userId, LocalDate start, LocalDate end);
+
+    Optional<Income> findTopByCategoryIgnoreCaseOrderByDateDesc(String category);
 }
