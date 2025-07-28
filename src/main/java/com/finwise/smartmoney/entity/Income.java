@@ -1,7 +1,6 @@
 package com.finwise.smartmoney.entity;
 
 import jakarta.persistence.*;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
@@ -19,10 +18,9 @@ public class Income {
     private String source;
     private Boolean isRecurring;
     private String note;
+    private String userId;
 
     // Getters and Setters
-
-
     public Long getId() {
         return id;
     }
@@ -77,5 +75,12 @@ public class Income {
 
     public void setNote(String note) {
         this.note = note;
+    }
+    public String getUserId() {
+        return userId;
+    }
+
+    public void setUserId(String userId) {
+        this.userId = userId;
     }
 }

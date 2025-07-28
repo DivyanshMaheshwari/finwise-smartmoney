@@ -8,10 +8,11 @@ import com.finwise.smartmoney.enums.Frequency;
 import com.finwise.smartmoney.enums.TransactionType;
 import com.finwise.smartmoney.repository.IncomeRepository;
 import com.finwise.smartmoney.repository.RecurringTransactionRepository;
+import com.finwise.smartmoney.util.JwtUtil;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -25,8 +26,17 @@ public class IncomeService {
     @Autowired
     private RecurringTransactionRepository recurringTransactionRepository;
 
+    @Autowired
+    private HttpServletRequest request;
+
+    @Autowired
+    private JwtUtil jwtUtil;
+
     public String saveIncome(IncomeRequestDTO incomeRequestDTO) {
+        String userId = extractUserIdFromToken();
+
         Income income = new Income();
+        income.setUserId(userId);
         income.setAmount(incomeRequestDTO.getAmount());
         income.setDate(incomeRequestDTO.getDate() != null ? incomeRequestDTO.getDate() : LocalDate.now());
         income.setCategory(incomeRequestDTO.getCategory());
@@ -36,14 +46,12 @@ public class IncomeService {
 
         Income savedIncome = incomeRepository.save(income);
 
-        // 💡 Handle recurring logic
-        if (incomeRequestDTO.getIsRecurring() != null && incomeRequestDTO.getIsRecurring()) {
+        if (Boolean.TRUE.equals(incomeRequestDTO.getIsRecurring())) {
             RecurringTransaction tx = new RecurringTransaction();
             tx.setType(TransactionType.INCOME);
             tx.setReferenceId(savedIncome.getId());
             tx.setStartDate(savedIncome.getDate());
 
-            // Set frequency
             Frequency frequency = Frequency.MONTHLY; // Default
             if (incomeRequestDTO.getFrequency() != null) {
                 try {
@@ -53,11 +61,8 @@ public class IncomeService {
                 }
             }
             tx.setFrequency(frequency);
-
-            // Set end date if given
             tx.setEndDate(incomeRequestDTO.getEndDate());
 
-            // Set recurring day (defaults to transaction day)
             Integer recurringDay = incomeRequestDTO.getRecurringDay() != null
                     ? incomeRequestDTO.getRecurringDay()
                     : savedIncome.getDate().getDayOfMonth();
@@ -73,10 +78,12 @@ public class IncomeService {
     }
 
     public List<IncomeResponseDTO> getIncomesByMonth(int month, int year) {
+        String userId = extractUserIdFromToken();
+
         LocalDate start = LocalDate.of(year, month, 1);
         LocalDate end = start.withDayOfMonth(start.lengthOfMonth());
 
-        List<Income> incomes = incomeRepository.findByDateBetween(start, end);
+        List<Income> incomes = incomeRepository.findByUserIdAndDateBetween(userId, start, end);
 
         return incomes.stream()
                 .map(this::mapToDTO)
@@ -92,6 +99,7 @@ public class IncomeService {
         dto.setSource(income.getSource());
         dto.setNote(income.getNote());
         dto.setIsRecurring(income.getIsRecurring());
+        dto.setUserId(income.getUserId());
         return dto;
     }
 
@@ -101,5 +109,13 @@ public class IncomeService {
             case MONTHLY -> from.plusMonths(1);
             case YEARLY -> from.plusYears(1);
         };
+    }
+
+    private String extractUserIdFromToken() {
+        String token = request.getHeader("Authorization");
+        if (token != null && token.startsWith("Bearer ")) {
+            return jwtUtil.extractUserId(token.substring(7));
+        }
+        throw new RuntimeException("Missing or invalid Authorization header.");
     }
 }
