@@ -10,7 +10,9 @@ import com.finwise.smartmoney.repository.ExpenseRepository;
 import com.finwise.smartmoney.repository.IncomeRepository;
 import com.finwise.smartmoney.repository.SavingRepository;
 import com.finwise.smartmoney.util.DateUtils;
+import com.finwise.smartmoney.util.JwtUtil;
 import com.finwise.smartmoney.util.MonthRange;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -33,14 +35,27 @@ public class SummaryService {
     @Autowired
     private SavingRepository savingRepository;
 
-    public MonthlySummaryResponseDTO getSummary(String userId,int month, int year) {
+    @Autowired
+    private HttpServletRequest request;
+
+    @Autowired
+    private JwtUtil jwtUtil;
+
+    public MonthlySummaryResponseDTO getSummary(int month, int year) {
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            throw new RuntimeException("Missing or invalid Authorization header");
+        }
+        String token = authHeader.substring(7);
+        String userId = jwtUtil.extractUserId(token);
+
         MonthRange range = DateUtils.getMonthRange(year, month);
         LocalDate start = range.getStart();
         LocalDate end = range.getEnd();
 
-        List<Income> incomes = incomeRepository.findByUserIdAndDateBetween(userId, start,end);
-        List<Expense> expenses = expenseRepository.findByDateBetween(start, end);
-        List<Saving> savings = savingRepository.findByDateBetween(start, end);
+        List<Income> incomes = incomeRepository.findByUserIdAndDateBetween(userId, start, end);
+        List<Expense> expenses = expenseRepository.findByUserIdAndDateBetween(userId, start, end);
+        List<Saving> savings = savingRepository.findByUserIdAndDateBetween(userId, start, end);
 
         BigDecimal totalIncome = BigDecimal.ZERO;
         for (Income income : incomes) {
@@ -62,7 +77,6 @@ public class SummaryService {
         BigDecimal actualWants = BigDecimal.ZERO;
         BigDecimal actualInvestments = BigDecimal.ZERO;
 
-
         for (Expense expense : expenses) {
             if ("needs".equalsIgnoreCase(expense.getType()) && expense.getAmount() != null) {
                 actualNeeds = actualNeeds.add(expense.getAmount());
@@ -70,7 +84,7 @@ public class SummaryService {
                 actualWants = actualWants.add(expense.getAmount());
             }
         }
-        // calculate actual investments from savings
+
         for (Saving saving : savings) {
             actualInvestments = actualInvestments.add(saving.getAmount());
         }
@@ -84,9 +98,14 @@ public class SummaryService {
         dto.setActualWants(actualWants);
         dto.setActualInvestments(actualInvestments);
 
-        Income salaryIncome = incomeRepository.findTopByCategoryIgnoreCaseOrderByDateDesc("salary").orElse(null);
+        Income salaryIncome = incomes.stream()
+                .filter(in -> in.getCategory() != null && in.getCategory().equalsIgnoreCase("salary"))
+                .sorted((a, b) -> b.getDate().compareTo(a.getDate()))
+                .findFirst()
+                .orElse(null);
+
         if (salaryIncome != null) {
-            BudgetPlan budget = budgetPlanRepository.findByIncome(salaryIncome).orElse(null);
+            BudgetPlan budget = budgetPlanRepository.findByIncomeAndUserId(salaryIncome,userId).orElse(null);
             if (budget != null) {
                 dto.setBudgetedNeeds(budget.getCalculatedNeeds());
                 dto.setBudgetedWants(budget.getCalculatedWants());

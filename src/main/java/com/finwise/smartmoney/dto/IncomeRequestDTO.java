@@ -12,8 +12,8 @@ public class IncomeRequestDTO {
     private String note;
     private String frequency;      // WEEKLY, MONTHLY, YEARLY
     private LocalDate endDate;     // Optional
-    private Integer recurringDay;  // Optional (defaults to transaction date)
-
+    private Integer recurringDay;
+    private String userId;
 
     // Getters and Setters
 
@@ -88,5 +88,13 @@ public class IncomeRequestDTO {
 
     public void setRecurringDay(Integer recurringDay) {
         this.recurringDay = recurringDay;
+    }
+
+    public String getUserId() {
+        return userId;
+    }
+
+    public void setUserId(String userId) {
+        this.userId = userId;
     }
 }

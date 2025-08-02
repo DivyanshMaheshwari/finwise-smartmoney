@@ -11,8 +11,6 @@ public class IncomeResponseDTO {
     private String source;
     private Boolean isRecurring;
     private String note;
-    private String userId;
-
 
     // Getters and Setters
 
@@ -71,13 +69,5 @@ public class IncomeResponseDTO {
 
     public void setNote(String note) {
         this.note = note;
-    }
-
-    public String getUserId() {
-        return userId;
-    }
-
-    public void setUserId(String userId) {
-        this.userId = userId;
     }
 }

@@ -27,4 +27,8 @@ public class IncomeController {
             @RequestParam int year) {
         return ResponseEntity.ok(incomeService.getIncomesByMonth(month, year));
     }
+    @DeleteMapping("/remove/{id}")
+    public ResponseEntity<String> deleteIncome(@PathVariable Long id) {
+        return ResponseEntity.ok(incomeService.deleteIncome(id));
+    }
 }

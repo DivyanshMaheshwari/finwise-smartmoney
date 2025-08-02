@@ -10,6 +10,7 @@ import com.finwise.smartmoney.repository.IncomeRepository;
 import com.finwise.smartmoney.repository.RecurringTransactionRepository;
 import com.finwise.smartmoney.util.JwtUtil;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -22,13 +23,10 @@ public class IncomeService {
 
     @Autowired
     private IncomeRepository incomeRepository;
-
     @Autowired
     private RecurringTransactionRepository recurringTransactionRepository;
-
     @Autowired
     private HttpServletRequest request;
-
     @Autowired
     private JwtUtil jwtUtil;
 
@@ -48,6 +46,7 @@ public class IncomeService {
 
         if (Boolean.TRUE.equals(incomeRequestDTO.getIsRecurring())) {
             RecurringTransaction tx = new RecurringTransaction();
+            tx.setUserId(userId);
             tx.setType(TransactionType.INCOME);
             tx.setReferenceId(savedIncome.getId());
             tx.setStartDate(savedIncome.getDate());
@@ -99,7 +98,6 @@ public class IncomeService {
         dto.setSource(income.getSource());
         dto.setNote(income.getNote());
         dto.setIsRecurring(income.getIsRecurring());
-        dto.setUserId(income.getUserId());
         return dto;
     }
 
@@ -118,4 +116,13 @@ public class IncomeService {
         }
         throw new RuntimeException("Missing or invalid Authorization header.");
     }
+
+    @Transactional
+    public String deleteIncome(Long id) {
+        incomeRepository.deleteById(id);
+        recurringTransactionRepository.deleteByReferenceIdAndType(id, TransactionType.INCOME);
+        return "Income and associated recurring transaction deleted successfully";
+    }
+
+
 }

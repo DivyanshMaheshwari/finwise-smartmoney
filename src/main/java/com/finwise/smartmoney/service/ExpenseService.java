@@ -9,9 +9,12 @@ import com.finwise.smartmoney.enums.TransactionType;
 import com.finwise.smartmoney.repository.ExpenseRepository;
 import com.finwise.smartmoney.repository.RecurringTransactionRepository;
 import com.finwise.smartmoney.util.DateUtils;
+import com.finwise.smartmoney.util.JwtUtil;
 import com.finwise.smartmoney.util.MonthRange;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -26,8 +29,17 @@ public class ExpenseService {
     @Autowired
     private RecurringTransactionRepository recurringTransactionRepository;
 
+    @Autowired
+    private HttpServletRequest request;
+
+    @Autowired
+    private JwtUtil jwtUtil;
+
     public String saveExpense(ExpenseRequestDTO expenseRequestDTO) {
+        String userId = extractUserIdFromToken();
+
         Expense expense = new Expense();
+        expense.setUserId(userId);
         expense.setAmount(expenseRequestDTO.getAmount());
         expense.setCategory(expenseRequestDTO.getCategory());
         expense.setType(expenseRequestDTO.getType());
@@ -38,8 +50,9 @@ public class ExpenseService {
 
         Expense savedExpense = expenseRepository.save(expense);
 
-        if (expenseRequestDTO.getIsRecurring() != null && expenseRequestDTO.getIsRecurring()) {
+        if (Boolean.TRUE.equals(expenseRequestDTO.getIsRecurring())) {
             RecurringTransaction tx = new RecurringTransaction();
+            tx.setUserId(userId);
             tx.setType(TransactionType.EXPENSE);
             tx.setReferenceId(savedExpense.getId());
             tx.setStartDate(savedExpense.getDate());
@@ -61,6 +74,7 @@ public class ExpenseService {
             tx.setRecurringDay(recurringDay);
             tx.setNextDueDate(getNextDate(savedExpense.getDate(), frequency));
             tx.setActive(true);
+
             recurringTransactionRepository.save(tx);
         }
 
@@ -68,8 +82,11 @@ public class ExpenseService {
     }
 
     public List<ExpenseResponseDTO> getExpensesByMonth(int month, int year) {
+        String userId = extractUserIdFromToken();
+
         MonthRange range = DateUtils.getMonthRange(year, month);
-        List<Expense> expenses = expenseRepository.findByDateBetween(range.getStart(), range.getEnd());
+        List<Expense> expenses = expenseRepository.findByUserIdAndDateBetween(userId, range.getStart(), range.getEnd());
+
         return expenses.stream()
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
@@ -94,5 +111,19 @@ public class ExpenseService {
             case MONTHLY -> from.plusMonths(1);
             case YEARLY -> from.plusYears(1);
         };
+    }
+
+    private String extractUserIdFromToken() {
+        String token = request.getHeader("Authorization");
+        if (token != null && token.startsWith("Bearer ")) {
+            return jwtUtil.extractUserId(token.substring(7));
+        }
+        throw new RuntimeException("Missing or invalid Authorization header.");
+    }
+    @Transactional
+    public String deleteIncome(Long id) {
+        expenseRepository.deleteById(id);
+        recurringTransactionRepository.deleteByReferenceIdAndType(id, TransactionType.EXPENSE);
+        return "Expense and associated recurring transaction deleted successfully";
     }
 }

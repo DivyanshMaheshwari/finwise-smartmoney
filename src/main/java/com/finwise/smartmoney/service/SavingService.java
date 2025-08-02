@@ -9,9 +9,12 @@ import com.finwise.smartmoney.enums.TransactionType;
 import com.finwise.smartmoney.repository.RecurringTransactionRepository;
 import com.finwise.smartmoney.repository.SavingRepository;
 import com.finwise.smartmoney.util.DateUtils;
+import com.finwise.smartmoney.util.JwtUtil;
 import com.finwise.smartmoney.util.MonthRange;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -26,8 +29,17 @@ public class SavingService {
     @Autowired
     private RecurringTransactionRepository recurringTransactionRepository;
 
+    @Autowired
+    private JwtUtil jwtUtil;
+
+    @Autowired
+    private HttpServletRequest request;
+
     public String saveSaving(SavingRequestDTO savingRequestDTO) {
+        String userId = extractUserIdFromToken();
+
         Saving saving = new Saving();
+        saving.setUserId(userId);
         saving.setAmount(savingRequestDTO.getAmount());
         saving.setCategory(savingRequestDTO.getCategory());
         saving.setNote(savingRequestDTO.getNote());
@@ -59,6 +71,7 @@ public class SavingService {
             tx.setRecurringDay(recurringDay);
             tx.setNextDueDate(getNextDate(savedSaving.getDate(), frequency));
             tx.setActive(true);
+            tx.setUserId(userId);
             recurringTransactionRepository.save(tx);
         }
 
@@ -66,8 +79,11 @@ public class SavingService {
     }
 
     public List<SavingResponseDTO> getSavingsByMonth(int month, int year) {
+        String userId = extractUserIdFromToken();
+
         MonthRange range = DateUtils.getMonthRange(year, month);
-        List<Saving> savings = savingRepository.findByDateBetween(range.getStart(), range.getEnd());
+        List<Saving> savings = savingRepository.findByUserIdAndDateBetween(userId, range.getStart(), range.getEnd());
+
         return savings.stream()
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
@@ -90,5 +106,19 @@ public class SavingService {
             case MONTHLY -> from.plusMonths(1);
             case YEARLY -> from.plusYears(1);
         };
+    }
+
+    private String extractUserIdFromToken() {
+        String token = request.getHeader("Authorization");
+        if (token != null && token.startsWith("Bearer ")) {
+            return jwtUtil.extractUserId(token.substring(7));
+        }
+        throw new RuntimeException("Missing or invalid Authorization header.");
+    }
+    @Transactional
+    public String deleteIncome(Long id) {
+        savingRepository.deleteById(id);
+        recurringTransactionRepository.deleteByReferenceIdAndType(id, TransactionType.SAVING);
+        return "Saving and associated recurring transaction deleted successfully";
     }
 }

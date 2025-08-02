@@ -28,4 +28,8 @@ public class ExpenseController {
     ) {
         return ResponseEntity.ok(expenseService.getExpensesByMonth(month, year));
     }
+    @DeleteMapping("/remove/{id}")
+    public ResponseEntity<String> deleteExpense(@PathVariable Long id) {
+        return ResponseEntity.ok(expenseService.deleteIncome(id));
+    }
 }

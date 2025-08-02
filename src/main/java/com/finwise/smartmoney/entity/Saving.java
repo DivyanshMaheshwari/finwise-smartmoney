@@ -20,6 +20,8 @@ public class Saving {
     private Boolean isRecurring;
 
     private String note;
+    private String userId;
+
 
     // Getters and Setters
     public Long getId() { return id; }
@@ -39,4 +41,12 @@ public class Saving {
 
     public String getNote() { return note; }
     public void setNote(String note) { this.note = note; }
+
+    public String getUserId() {
+        return userId;
+    }
+
+    public void setUserId(String userId) {
+        this.userId = userId;
+    }
 }

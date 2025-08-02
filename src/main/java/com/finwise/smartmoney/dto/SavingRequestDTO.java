@@ -12,6 +12,8 @@ public class SavingRequestDTO {
     private String frequency;      // WEEKLY, MONTHLY, YEARLY
     private LocalDate endDate;     // Optional
     private Integer recurringDay;  // Optional (defaults to transaction date)
+    private String userId;
+
 
 
     // Getters and Setters
@@ -52,5 +54,13 @@ public class SavingRequestDTO {
 
     public void setRecurringDay(Integer recurringDay) {
         this.recurringDay = recurringDay;
+    }
+
+    public String getUserId() {
+        return userId;
+    }
+
+    public void setUserId(String userId) {
+        this.userId = userId;
     }
 }
