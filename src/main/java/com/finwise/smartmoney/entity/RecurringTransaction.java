@@ -30,6 +30,8 @@ public class RecurringTransaction {
     private LocalDate nextDueDate;
 
     private Boolean active = true;
+    private String userId;
+
     @Column(name = "is_date_adjustable")
     private Boolean isDateAdjustable = true;
 
@@ -105,5 +107,13 @@ public class RecurringTransaction {
 
     public void setActive(Boolean active) {
         this.active = active;
+    }
+
+    public String getUserId() {
+        return userId;
+    }
+
+    public void setUserId(String userId) {
+        this.userId = userId;
     }
 }

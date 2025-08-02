@@ -28,4 +28,8 @@ public class SavingController {
     ) {
         return ResponseEntity.ok(savingService.getSavingsByMonth(month, year));
     }
+    @DeleteMapping("/remove/{id}")
+    public ResponseEntity<String> deleteSaving(@PathVariable Long id) {
+        return ResponseEntity.ok(savingService.deleteIncome(id));
+    }
 }

@@ -27,6 +27,8 @@ public class BudgetPlan {
     private BigDecimal calculatedWants;
     @Column(name = "calculated_investments")
     private BigDecimal calculatedInvestments;
+    private String userId;
+
 
     public Long getId() {
         return id;
@@ -90,5 +92,13 @@ public class BudgetPlan {
 
     public void setCalculatedInvestments(BigDecimal calculatedInvestments) {
         this.calculatedInvestments = calculatedInvestments;
+    }
+
+    public String getUserId() {
+        return userId;
+    }
+
+    public void setUserId(String userId) {
+        this.userId = userId;
     }
 }

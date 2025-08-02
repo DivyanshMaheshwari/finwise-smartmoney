@@ -18,13 +18,13 @@ public class Expense {
     @Column(nullable = false)
     private String type;
 
-    private String paymentMode; // e.g., UPI, Credit Card
+    private String paymentMode;
     private Boolean isRecurring;
     private String note;
+    private String userId;
+
 
     // Getters and setters
-
-
     public Long getId() {
         return id;
     }
@@ -87,5 +87,13 @@ public class Expense {
 
     public void setNote(String note) {
         this.note = note;
+    }
+
+    public String getUserId() {
+        return userId;
+    }
+
+    public void setUserId(String userId) {
+        this.userId = userId;
     }
 }

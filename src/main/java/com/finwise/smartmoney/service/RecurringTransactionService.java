@@ -4,7 +4,6 @@ import com.finwise.smartmoney.entity.*;
 import com.finwise.smartmoney.enums.Frequency;
 import com.finwise.smartmoney.repository.*;
 import com.finwise.exception.ResourceNotFoundException;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -31,10 +30,8 @@ public class RecurringTransactionService {
     @Autowired
     private ExpenseRepository expenseRepository;
 
-    // Cron job runs daily at 2 AM
-//    @Scheduled(cron = "0 0 2 * * *")
-    @Scheduled(cron = "0/30 * * * * *") // For testing, runs every 30 seconds
-
+    // Runs every 30 seconds for testing
+    @Scheduled(cron = "0/30 * * * * *")
     public void processRecurringTransactions() {
         logger.info("Scheduled Job Started: Processing Recurring Transactions");
 
@@ -63,6 +60,7 @@ public class RecurringTransactionService {
                         copy.setNote(original.getNote());
                         copy.setSource(original.getSource());
                         copy.setIsRecurring(true);
+                        copy.setUserId(original.getUserId()); // Set userId
                         incomeRepository.save(copy);
                         logger.info("Created new INCOME entry for transaction ID " + tx.getId());
                     } else {
@@ -80,6 +78,7 @@ public class RecurringTransactionService {
                         copy.setDate(LocalDate.now());
                         copy.setNote(original.getNote());
                         copy.setIsRecurring(true);
+                        copy.setUserId(original.getUserId());
                         savingRepository.save(copy);
                         logger.info("Created new SAVING entry for transaction ID " + tx.getId());
                     } else {
@@ -99,6 +98,7 @@ public class RecurringTransactionService {
                         copy.setPaymentMode(original.getPaymentMode());
                         copy.setType(original.getType());
                         copy.setIsRecurring(true);
+                        copy.setUserId(original.getUserId()); // Set userId
                         expenseRepository.save(copy);
                         logger.info("Created new EXPENSE entry for transaction ID " + tx.getId());
                     } else {
@@ -107,6 +107,7 @@ public class RecurringTransactionService {
                 }
             }
 
+            // Handle next due date or disable
             if (tx.getEndDate() != null && !tx.getEndDate().isAfter(LocalDate.now())) {
                 tx.setActive(false);
                 logger.info("Deactivated recurring transaction ID " + tx.getId() + " — Reached end date");
@@ -142,7 +143,6 @@ public class RecurringTransactionService {
                 .orElseThrow(() -> new ResourceNotFoundException("RecurringTransaction not found"));
 
         rt.setActive(false);
-
         recurringRepo.save(rt);
     }
 
@@ -151,7 +151,6 @@ public class RecurringTransactionService {
                 .orElseThrow(() -> new ResourceNotFoundException("RecurringTransaction not found"));
 
         rt.setActive(true);
-
         recurringRepo.save(rt);
     }
 
@@ -161,6 +160,4 @@ public class RecurringTransactionService {
 
         recurringRepo.delete(rt);
     }
-
-
 }

@@ -5,6 +5,8 @@ import com.finwise.smartmoney.entity.BudgetPlan;
 import com.finwise.smartmoney.entity.Income;
 import com.finwise.smartmoney.repository.BudgetPlanRepository;
 import com.finwise.smartmoney.repository.IncomeRepository;
+import com.finwise.smartmoney.util.JwtUtil;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -17,21 +19,28 @@ public class BudgetPlanService {
 
     @Autowired
     private BudgetPlanRepository budgetPlanRepository;
+
     @Autowired
-    IncomeRepository incomeRepository;
+    private IncomeRepository incomeRepository;
+
+    @Autowired
+    private JwtUtil jwtUtil;
+
+    @Autowired
+    private HttpServletRequest request;
 
     public String generateBudgetFromLatestSalary() {
-        Income salaryIncome = incomeRepository
-                .findTopByCategoryIgnoreCaseOrderByDateDesc("salary")
-                .orElseThrow(() -> new RuntimeException("No salary income found"));
+        String userId = extractUserIdFromToken();
 
-        // Check if a budget plan already exists for this salary
-        Optional<BudgetPlan> existing = budgetPlanRepository.findByIncome(salaryIncome);
+        Income salaryIncome = incomeRepository
+                .findTopByUserIdAndCategoryIgnoreCaseOrderByDateDesc(userId, "salary")
+                .orElseThrow(() -> new RuntimeException("No salary income found for user"));
+
+        Optional<BudgetPlan> existing = budgetPlanRepository.findByIncomeAndUserId(salaryIncome, userId);
         if (existing.isPresent()) {
             throw new RuntimeException("Budget plan already exists for this salary income");
         }
-        // Use standard 50/30/20 rule
-        // 50% for needs, 30% for wants, 20% for investments
+
         BigDecimal total = salaryIncome.getAmount();
         BigDecimal needsPercent = BigDecimal.valueOf(50);
         BigDecimal wantsPercent = BigDecimal.valueOf(30);
@@ -39,6 +48,7 @@ public class BudgetPlanService {
 
         BudgetPlan budgetPlan = new BudgetPlan();
         budgetPlan.setIncome(salaryIncome);
+        budgetPlan.setUserId(userId);
         budgetPlan.setNeedsPercent(needsPercent);
         budgetPlan.setWantsPercent(wantsPercent);
         budgetPlan.setInvestPercent(investPercent);
@@ -52,11 +62,14 @@ public class BudgetPlanService {
     }
 
     public BudgetPlanResponseDTO getBudgetByLatestSalary() {
-        Income salaryIncome = incomeRepository
-                .findTopByCategoryIgnoreCaseOrderByDateDesc("salary")
-                .orElseThrow(() -> new RuntimeException("No salary income found"));
+        String userId = extractUserIdFromToken();
 
-        BudgetPlan budgetPlan = budgetPlanRepository.findByIncome(salaryIncome)
+        Income salaryIncome = incomeRepository
+                .findTopByUserIdAndCategoryIgnoreCaseOrderByDateDesc(userId, "salary")
+                .orElseThrow(() -> new RuntimeException("No salary income found for user"));
+
+        BudgetPlan budgetPlan = budgetPlanRepository
+                .findByIncomeAndUserId(salaryIncome, userId)
                 .orElseThrow(() -> new RuntimeException("No budget found for the latest salary income"));
 
         return mapToDTO(budgetPlan);
@@ -70,5 +83,13 @@ public class BudgetPlanService {
         dto.setCalculatedWants(plan.getCalculatedWants());
         dto.setCalculatedInvestments(plan.getCalculatedInvestments());
         return dto;
+    }
+
+    private String extractUserIdFromToken() {
+        String token = request.getHeader("Authorization");
+        if (token != null && token.startsWith("Bearer ")) {
+            return jwtUtil.extractUserId(token.substring(7));
+        }
+        throw new RuntimeException("Missing or invalid Authorization header.");
     }
 }
