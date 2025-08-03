@@ -6,15 +6,12 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 public class BudgetPlanResponseDTO {
-    @JsonProperty("Income ID")
     private Long incomeId;
-    @JsonProperty("Salary date")
+    private BigDecimal salaryAmount;
+
     private LocalDate salaryDate;
-    @JsonProperty("Needs")
     private BigDecimal calculatedNeeds;
-    @JsonProperty("Wants")
     private BigDecimal calculatedWants;
-    @JsonProperty("Investments")
     private BigDecimal calculatedInvestments;
 
     // Getters and Setters
@@ -57,5 +54,13 @@ public class BudgetPlanResponseDTO {
 
     public void setCalculatedInvestments(BigDecimal calculatedInvestments) {
         this.calculatedInvestments = calculatedInvestments;
+    }
+
+    public BigDecimal getSalaryAmount() {
+        return salaryAmount;
+    }
+
+    public void setSalaryAmount(BigDecimal salaryAmount) {
+        this.salaryAmount = salaryAmount;
     }
 }

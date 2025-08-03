@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -38,7 +39,7 @@ public class BudgetPlanService {
 
         Optional<BudgetPlan> existing = budgetPlanRepository.findByIncomeAndUserId(salaryIncome, userId);
         if (existing.isPresent()) {
-            throw new RuntimeException("Budget plan already exists for this salary income");
+            return "Budget already exists for this salary.";
         }
 
         BigDecimal total = salaryIncome.getAmount();
@@ -60,20 +61,29 @@ public class BudgetPlanService {
 
         return "Budget plan generated successfully for income ID: " + savedBudgetPlan.getIncome().getId();
     }
-
-    public BudgetPlanResponseDTO getBudgetByLatestSalary() {
+    public List<BudgetPlanResponseDTO> getAllBudgetPlans() {
         String userId = extractUserIdFromToken();
 
-        Income salaryIncome = incomeRepository
-                .findTopByUserIdAndCategoryIgnoreCaseOrderByDateDesc(userId, "salary")
-                .orElseThrow(() -> new RuntimeException("No salary income found for user"));
+        List<BudgetPlan> plans = budgetPlanRepository.findAllByUserIdOrderByIncome_DateDesc(userId);
 
-        BudgetPlan budgetPlan = budgetPlanRepository
-                .findByIncomeAndUserId(salaryIncome, userId)
-                .orElseThrow(() -> new RuntimeException("No budget found for the latest salary income"));
-
-        return mapToDTO(budgetPlan);
+        return plans.stream()
+                .map(this::mapToDTO)
+                .toList();
     }
+    public String deleteBudgetPlan(Long budgetPlanId) {
+        String userId = extractUserIdFromToken();
+
+        BudgetPlan plan = budgetPlanRepository.findById(budgetPlanId)
+                .orElseThrow(() -> new RuntimeException("Budget plan not found"));
+
+        if (!plan.getUserId().equals(userId)) {
+            throw new RuntimeException("Unauthorized to delete this budget plan");
+        }
+
+        budgetPlanRepository.delete(plan);
+        return "Budget plan deleted successfully";
+    }
+
 
     private BudgetPlanResponseDTO mapToDTO(BudgetPlan plan) {
         BudgetPlanResponseDTO dto = new BudgetPlanResponseDTO();
@@ -82,6 +92,7 @@ public class BudgetPlanService {
         dto.setCalculatedNeeds(plan.getCalculatedNeeds());
         dto.setCalculatedWants(plan.getCalculatedWants());
         dto.setCalculatedInvestments(plan.getCalculatedInvestments());
+        dto.setSalaryAmount(plan.getIncome().getAmount());
         return dto;
     }
 

@@ -6,6 +6,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/FinWise/budget")
 public class BudgetController {
@@ -18,10 +20,12 @@ public class BudgetController {
         String response = budgetPlanService.generateBudgetFromLatestSalary();
         return ResponseEntity.ok(response);
     }
-
-    @GetMapping("/latest-salary")
-    public ResponseEntity<BudgetPlanResponseDTO> getLatestSalaryBudget() {
-        BudgetPlanResponseDTO response = budgetPlanService.getBudgetByLatestSalary();
-        return ResponseEntity.ok(response);
+    @GetMapping("/all")
+    public ResponseEntity<List<BudgetPlanResponseDTO>> getAllBudgets() {
+        return ResponseEntity.ok(budgetPlanService.getAllBudgetPlans());
+    }
+    @DeleteMapping("/remove/{id}")
+    public ResponseEntity<String> deleteBudget(@PathVariable Long id) {
+        return ResponseEntity.ok(budgetPlanService.deleteBudgetPlan(id));
     }
 }
