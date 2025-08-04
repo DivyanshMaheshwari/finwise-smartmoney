@@ -48,7 +48,7 @@ public class SavingService {
 
         Saving savedSaving = savingRepository.save(saving);
 
-        if (savingRequestDTO.getIsRecurring() != null && savingRequestDTO.getIsRecurring()) {
+        if (Boolean.TRUE.equals(savingRequestDTO.getIsRecurring())) {
             RecurringTransaction tx = new RecurringTransaction();
             tx.setType(TransactionType.SAVING);
             tx.setReferenceId(savedSaving.getId());
@@ -65,13 +65,16 @@ public class SavingService {
 
             tx.setFrequency(frequency);
             tx.setEndDate(savingRequestDTO.getEndDate());
+
             Integer recurringDay = savingRequestDTO.getRecurringDay() != null
                     ? savingRequestDTO.getRecurringDay()
                     : savedSaving.getDate().getDayOfMonth();
             tx.setRecurringDay(recurringDay);
-            tx.setNextDueDate(getNextDate(savedSaving.getDate(), frequency));
+
+            tx.setNextDueDate(DateUtils.getNextValidDueDate(savedSaving.getDate(), recurringDay, frequency));
             tx.setActive(true);
             tx.setUserId(userId);
+
             recurringTransactionRepository.save(tx);
         }
 
@@ -100,14 +103,6 @@ public class SavingService {
         return dto;
     }
 
-    private LocalDate getNextDate(LocalDate from, Frequency freq) {
-        return switch (freq) {
-            case WEEKLY -> from.plusWeeks(1);
-            case MONTHLY -> from.plusMonths(1);
-            case YEARLY -> from.plusYears(1);
-        };
-    }
-
     private String extractUserIdFromToken() {
         String token = request.getHeader("Authorization");
         if (token != null && token.startsWith("Bearer ")) {
@@ -115,6 +110,7 @@ public class SavingService {
         }
         throw new RuntimeException("Missing or invalid Authorization header.");
     }
+
     @Transactional
     public String deleteIncome(Long id) {
         savingRepository.deleteById(id);

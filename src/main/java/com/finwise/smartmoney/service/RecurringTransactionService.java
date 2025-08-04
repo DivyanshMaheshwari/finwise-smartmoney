@@ -4,6 +4,7 @@ import com.finwise.smartmoney.entity.*;
 import com.finwise.smartmoney.enums.Frequency;
 import com.finwise.smartmoney.repository.*;
 import com.finwise.exception.ResourceNotFoundException;
+import com.finwise.smartmoney.util.DateUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -112,7 +113,7 @@ public class RecurringTransactionService {
                 tx.setActive(false);
                 logger.info("Deactivated recurring transaction ID " + tx.getId() + " — Reached end date");
             } else {
-                LocalDate next = getNextDate(tx.getNextDueDate(), tx.getFrequency());
+                LocalDate next = DateUtils.getNextValidDueDate(tx.getNextDueDate(), tx.getRecurringDay(), tx.getFrequency());
                 tx.setNextDueDate(next);
                 logger.info("Updated nextDueDate for transaction ID " + tx.getId() + " to " + next);
             }
@@ -120,14 +121,6 @@ public class RecurringTransactionService {
 
         recurringRepo.saveAll(transactions);
         logger.info("Scheduled Job Completed: All due transactions processed");
-    }
-
-    private LocalDate getNextDate(LocalDate current, Frequency freq) {
-        return switch (freq) {
-            case WEEKLY -> current.plusWeeks(1);
-            case MONTHLY -> current.plusMonths(1);
-            case YEARLY -> current.plusYears(1);
-        };
     }
 
     public void updateNextDueDate(Long id, LocalDate newDate) {

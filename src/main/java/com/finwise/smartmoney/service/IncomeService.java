@@ -6,8 +6,10 @@ import com.finwise.smartmoney.entity.Income;
 import com.finwise.smartmoney.entity.RecurringTransaction;
 import com.finwise.smartmoney.enums.Frequency;
 import com.finwise.smartmoney.enums.TransactionType;
+import com.finwise.smartmoney.repository.BudgetPlanRepository;
 import com.finwise.smartmoney.repository.IncomeRepository;
 import com.finwise.smartmoney.repository.RecurringTransactionRepository;
+import com.finwise.smartmoney.util.DateUtils;
 import com.finwise.smartmoney.util.JwtUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +27,8 @@ public class IncomeService {
     private IncomeRepository incomeRepository;
     @Autowired
     private RecurringTransactionRepository recurringTransactionRepository;
+    @Autowired
+    private BudgetPlanRepository budgetPlanRepository;
     @Autowired
     private HttpServletRequest request;
     @Autowired
@@ -67,7 +71,7 @@ public class IncomeService {
                     : savedIncome.getDate().getDayOfMonth();
             tx.setRecurringDay(recurringDay);
 
-            tx.setNextDueDate(getNextDate(savedIncome.getDate(), frequency));
+            tx.setNextDueDate(DateUtils.getNextValidDueDate(savedIncome.getDate(), recurringDay, frequency));
             tx.setActive(true);
 
             recurringTransactionRepository.save(tx);
@@ -88,6 +92,78 @@ public class IncomeService {
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
     }
+    @Transactional
+    public String updateIncome(Long id, IncomeRequestDTO updatedData) {
+        String userId = extractUserIdFromToken();
+
+        Income income = incomeRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Income record not found"));
+
+        if (!income.getUserId().equals(userId)) {
+            throw new RuntimeException("Unauthorized update attempt");
+        }
+
+        // Update income
+        income.setAmount(updatedData.getAmount());
+        income.setDate(updatedData.getDate() != null ? updatedData.getDate() : LocalDate.now());
+        income.setCategory(updatedData.getCategory());
+        income.setSource(updatedData.getSource());
+        income.setNote(updatedData.getNote());
+        income.setIsRecurring(updatedData.getIsRecurring());
+        incomeRepository.save(income);
+
+        // Delete budget if salary
+        if ("salary".equalsIgnoreCase(updatedData.getCategory())) {
+            budgetPlanRepository.findByIncomeAndUserId(income, userId)
+                    .ifPresent(budgetPlanRepository::delete);
+        }
+
+        // Recurring logic
+        RecurringTransaction existingRecurring = recurringTransactionRepository
+                .findByReferenceIdAndType(income.getId(), TransactionType.INCOME);
+
+        if (Boolean.TRUE.equals(updatedData.getIsRecurring())) {
+            Frequency frequency = Frequency.MONTHLY;
+            if (updatedData.getFrequency() != null) {
+                try {
+                    frequency = Frequency.valueOf(updatedData.getFrequency().toUpperCase());
+                } catch (IllegalArgumentException e) {
+                    throw new RuntimeException("Invalid frequency. Allowed: WEEKLY, MONTHLY, YEARLY");
+                }
+            }
+
+            Integer recurringDay = updatedData.getRecurringDay() != null
+                    ? updatedData.getRecurringDay()
+                    : income.getDate().getDayOfMonth();
+
+            if (existingRecurring != null) {
+                existingRecurring.setFrequency(frequency);
+                existingRecurring.setStartDate(income.getDate());
+                existingRecurring.setRecurringDay(recurringDay);
+                existingRecurring.setEndDate(updatedData.getEndDate());
+                existingRecurring.setNextDueDate(DateUtils.getNextValidDueDate(income.getDate(), recurringDay, frequency));
+                existingRecurring.setActive(true);
+                recurringTransactionRepository.save(existingRecurring);
+            } else {
+                RecurringTransaction tx = new RecurringTransaction();
+                tx.setUserId(userId);
+                tx.setType(TransactionType.INCOME);
+                tx.setReferenceId(income.getId());
+                tx.setStartDate(income.getDate());
+                tx.setFrequency(frequency);
+                tx.setRecurringDay(recurringDay);
+                tx.setEndDate(updatedData.getEndDate());
+                tx.setNextDueDate(DateUtils.getNextValidDueDate(income.getDate(), recurringDay, frequency));
+                tx.setActive(true);
+                recurringTransactionRepository.save(tx);
+            }
+
+        } else if (existingRecurring != null) {
+            recurringTransactionRepository.delete(existingRecurring);
+        }
+
+        return "Income updated successfully";
+    }
 
     private IncomeResponseDTO mapToDTO(Income income) {
         IncomeResponseDTO dto = new IncomeResponseDTO();
@@ -100,15 +176,6 @@ public class IncomeService {
         dto.setIsRecurring(income.getIsRecurring());
         return dto;
     }
-
-    private LocalDate getNextDate(LocalDate from, Frequency freq) {
-        return switch (freq) {
-            case WEEKLY -> from.plusWeeks(1);
-            case MONTHLY -> from.plusMonths(1);
-            case YEARLY -> from.plusYears(1);
-        };
-    }
-
     private String extractUserIdFromToken() {
         String token = request.getHeader("Authorization");
         if (token != null && token.startsWith("Bearer ")) {
@@ -116,13 +183,10 @@ public class IncomeService {
         }
         throw new RuntimeException("Missing or invalid Authorization header.");
     }
-
     @Transactional
     public String deleteIncome(Long id) {
         incomeRepository.deleteById(id);
         recurringTransactionRepository.deleteByReferenceIdAndType(id, TransactionType.INCOME);
         return "Income and associated recurring transaction deleted successfully";
     }
-
-
 }
